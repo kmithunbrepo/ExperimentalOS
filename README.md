@@ -3,3 +3,4 @@ This a lab work done during the Operating Systems Laboratory Course while pursui
 
 A short intro to eXpOS:
 ExperimentalOS(eXpOS) is a tiny multiprogramming operating system built on a machine simulator called eXperimental String Machine(XSM, which consists of a processor, memory and disk). 
+Built complete OS from Scratch: Implemented basic versions of process management, memory management, interrupt handling and other important concepts of OS.
