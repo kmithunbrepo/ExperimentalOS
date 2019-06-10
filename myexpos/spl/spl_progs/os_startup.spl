@@ -1,5 +1,7 @@
 loadi(4,17);
 loadi(5,18);
+loadi(16,29);
+loadi(17,30);
 loadi(63,13);
 loadi(64,14);
 loadi(65,7);
@@ -48,5 +50,6 @@ PTLR=10;
 SP=8*512;
 
 [76*512]=[65*512+1];
+breakpoint;
 
 ireturn;
