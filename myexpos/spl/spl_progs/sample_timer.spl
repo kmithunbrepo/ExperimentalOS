@@ -12,11 +12,7 @@ process_table_entry=PROCESS_TABLE+currentPID*16;
 [process_table_entry+4]=READY;
 
 alias newPID R2;
-if(currentPID==0) then
-	newPID=1;
-else
-	newPID=0;
-endif;
+newPID=(currentPID+1)%3;
 
 alias new_process_table R3;
 new_process_table=PROCESS_TABLE+newPID*16;
