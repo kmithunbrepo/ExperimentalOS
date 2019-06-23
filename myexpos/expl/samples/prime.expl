@@ -1,0 +1,28 @@
+int main(){
+	decl 
+		int n,temp,i,sqr,flag;
+	enddecl
+	begin
+		n=2;
+		while(n<=100) do
+			i=2;
+			flag=0;
+			sqr=i*i;
+			while(sqr<=n) do	
+				temp=n%i;
+				if(temp==0) then
+					flag=1;
+					break;
+				endif;
+				i=i+1;
+				sqr=i*i;
+			endwhile;
+			if(flag==0) then
+				temp=exposcall("Write",-2,n);
+			endif;
+			n=n+1;
+		endwhile;
+		return 0;
+	end
+}
+			
