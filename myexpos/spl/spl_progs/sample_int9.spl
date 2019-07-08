@@ -1,0 +1,105 @@
+alias userSP R1;
+userSP=SP;
+[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+13]=SP;
+SP=[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+11]*512-1;
+[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=9;
+alias fileName R3;
+fileName=[([PTBR+2*(userSP-4)/512]*512)+(userSP-4)%512];
+alias pid R2;
+pid=[SYSTEM_STATUS_TABLE+1];
+alias inodeIndex R4;
+inodeIndex=1;
+while(inodeIndex<MAX_FILE_NUM) do
+	if([INODE_TABLE+16*inodeIndex+1]==fileName) then
+		break;
+	endif;
+	inodeIndex=inodeIndex+1;
+endwhile;
+if(inodeIndex==MAX_FILE_NUM || [INODE_TABLE+16*inodeIndex]!=EXEC) then
+	alias retAdd R5;
+	retAdd=([PTBR+2*(userSP-1)/512]*512)+(userSP-1)%512;
+	[retAdd]=-1;
+	[PROCESS_TABLE+pid*16+9]=0;
+	SP=userSP;
+	ireturn;
+endif;
+multipush(R1,R2,R3,R4);
+R1=3;
+R2=[SYSTEM_STATUS_TABLE+1];
+call MOD_1;
+multipop(R1,R2,R3,R4);
+alias userAreaPageNo R5;
+userAreaPageNo=[PROCESS_TABLE+pid*16+11];
+[MEMORY_FREE_LIST+userAreaPageNo]=[MEMORY_FREE_LIST+userAreaPageNo]+1;
+[SYSTEM_STATUS_TABLE+2]=[SYSTEM_STATUS_TABLE+2]-1;
+SP=userAreaPageNo*512-1;
+[PROCESS_TABLE+pid*16+4]=RUNNING;
+[PROCESS_TABLE+pid*16+7]=inodeIndex;
+alias ptbase R6;
+ptbase=PAGE_TABLE_BASE+pid*20;
+//Setting page table entry for new process with same pid
+[ptbase+0]=63;
+[ptbase+1]="0100";
+[ptbase+2]=64;
+[ptbase+3]="0100";
+multipush(R1,R2,R3,R4,R5,R6);
+//Allocating stack pages
+//stack page1
+multipush(R6);//to reduce the no of instructions in each multipush & multipop
+R1=1;
+call MOD_2;
+multipop(R6);
+[ptbase+16]=R0;
+[ptbase+17]="0110";
+//stack page2
+multipush(R6);
+R1=1;
+call MOD_2;
+multipop(R6);
+[ptbase+18]=R0;
+[ptbase+19]="0110";
+//Allocating heap pages
+//heap page1
+multipush(R6);
+R1=1;
+call MOD_2;
+multipop(R6);
+[ptbase+4]=R0;
+[ptbase+5]="0110";
+//heap page2
+multipush(R6);
+R1=1;
+call MOD_2;
+multipop(R6);
+[ptbase+6]=R0;
+[ptbase+7]="0110";
+multipop(R1,R2,R3,R4,R5,R6);
+
+
+//Code Page
+alias ptbrcntr R7;
+ptbrcntr=8;
+alias inodeblock R8;
+inodeblock=8;
+while(inodeblock<12) do
+        if([INODE_TABLE+(inodeIndex*16)+inodeblock]==-1) then
+                [PAGE_TABLE_BASE+(pid*20)+ptbrcntr]=-1;
+                [PAGE_TABLE_BASE+(pid*20)+ptbrcntr+1]="0000";
+        else
+                multipush(R1,R2,R3,R4,R5,R6,R7,R8);
+                R1=1;
+                call MOD_2;
+                multipop(R1,R2,R3,R4,R5,R6,R7,R8);
+                [PAGE_TABLE_BASE+(pid*20)+ptbrcntr]=R0;
+                [PAGE_TABLE_BASE+(pid*20)+ptbrcntr+1]="0100";
+                loadi(R0,[INODE_TABLE+(inodeIndex*16)+inodeblock]);
+        endif;
+        ptbrcntr=ptbrcntr+2;
+        inodeblock=inodeblock+1;
+endwhile;
+
+[([PAGE_TABLE_BASE+(pid*20)+16])*512] = [([PAGE_TABLE_BASE+(pid*20)+8]) * 512 + 1];
+SP=8*512;
+[PROCESS_TABLE+(pid*16)+9]=0;
+ireturn;
+

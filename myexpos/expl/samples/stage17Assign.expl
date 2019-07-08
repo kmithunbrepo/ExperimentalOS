@@ -1,0 +1,13 @@
+int main(){
+	decl
+		str fileName,output;
+		int temp;
+	enddecl
+	begin
+		temp=exposcall("Read",-1,fileName);
+		temp=exposcall("Exec",fileName);
+		output="Not Found";		
+		temp=exposcall("Write",-2,output);
+		return 0;
+	end
+}
