@@ -26,6 +26,7 @@ loadi(50,63);
 loadi(51,64);
 loadi(59,3);
 loadi(60,4);
+loadi(61,2);
 loadi(63,13);
 loadi(64,14);
 loadi(65,7);
@@ -70,7 +71,13 @@ PTBR=PAGE_TABLE_BASE+20;
 [PROCESS_TABLE+16+15]=10;
 
 [76*512]=[65*512+1];
-
+R1=0;
+while(R1<10) do
+	[DISK_MAP_TABLE+10+R1]=-1;
+	R1=R1+1;
+endwhile;
+[DISK_MAP_TABLE+10+4]=7;
+[DISK_MAP_TABLE+10+5]=8;
 R1=2;
 while(R1<16) do
 	[PROCESS_TABLE+16*R1+4]=TERMINATED;

@@ -1,0 +1,45 @@
+type
+	List{
+		int data;
+		List next;
+	}
+endtype
+decl
+	List head;
+enddecl
+int main(){
+	decl 
+		int n,temp,x;
+		List p,q;
+	enddecl
+	begin
+		temp=exposcall("Heapset");
+		if(temp==-1) then
+			temp=exposcall("Write",-2,"HeapErr");
+		else
+			head=null;
+			temp=exposcall("Write",-2,"Enter n");
+			temp=exposcall("Read",-1,n);
+			while(n!=0) do
+				temp=exposcall("Read",-1,x);
+				p=exposcall("Alloc",8);
+				p.data=x;
+				p.next=null;
+				if(head==null) then
+					head=p;
+					q=p;
+				else
+					q.next=p;
+					q=q.next;
+				endif;
+				n=n-1;
+			endwhile;
+			p=head;
+			while(p!=null) do
+				temp=exposcall("Write",-2,p.data);
+				p=p.next;
+			endwhile;
+		endif;
+		return 1;
+	end
+}
