@@ -1,0 +1,113 @@
+[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=8;
+[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+13]=SP;
+alias userSP R1;
+userSP=SP;
+alias pid R2;
+pid=[SYSTEM_STATUS_TABLE+1];
+SP=[PROCESS_TABLE+pid*16+11]*512-1;
+multipush(R1,R2);
+R1=1;
+call MOD_1;
+multipop(R1,R2);
+alias childPid R3;
+childPid=R0;
+//If process table is full 
+if(R0==-1) then
+	alias retAdd R4;
+	retAdd=[PTBR+2*((userSP-1)/512)]*512+(userSP-1)%512;
+	[retAdd]=-1;
+	[PROCESS_TABLE+pid*16+9]=0;
+	SP=userSP;
+	ireturn;
+endif;
+//Allocating pages for heap if it is not allocated to parent till now
+if([PTBR+4]==-1) then
+	//Allocating heap pages by calling get free page
+	multipush(R1,R2,R3);
+	R1=1;
+	call MOD_2;
+	multipop(R1,R2,R3);
+	[PTBR+4]=R0;
+	[PTBR+5]="0110";
+	multipush(R1,R2,R3);
+	R1=1;
+	call MOD_2;
+	multipop(R1,R2,R3);
+	[PTBR+6]=R0;
+	[PTBR+7]="0110";	
+endif;
+//Allocating two stack pages and one user area page for child process
+//calling get free page
+multipush(R1,R2,R3);
+R1=1;
+call MOD_2;
+multipop(R1,R2,R3);
+[PAGE_TABLE_BASE+(childPid)*20+16]=R0;
+[PAGE_TABLE_BASE+(childPid)*20+17]=[PTBR+17];
+multipush(R1,R2,R3);
+R1=1;
+call MOD_2;
+multipop(R1,R2,R3);
+[PAGE_TABLE_BASE+(childPid)*20+18]=R0;
+[PAGE_TABLE_BASE+(childPid)*20+19]=[PTBR+19];
+//Getting free page for  user area page of child
+multipush(R1,R2,R3);
+R1=1;
+call MOD_2;
+multipop(R1,R2,R3);
+alias childUserAreaPg R4;
+childUserAreaPg=R0;
+[PROCESS_TABLE+childPid*16+3]=[PROCESS_TABLE+pid*16+3];
+[PROCESS_TABLE+childPid*16+6]=[PROCESS_TABLE+pid*16+6];
+[PROCESS_TABLE+childPid*16+10]=[PROCESS_TABLE+pid*16+10];
+[PROCESS_TABLE+childPid*16+11]=childUserAreaPg;
+[PROCESS_TABLE+childPid*16+7]=[PROCESS_TABLE+pid*16+7];
+[PROCESS_TABLE+childPid*16+13]=[PROCESS_TABLE+pid*16+13];
+[PROCESS_TABLE+childPid*16+0]=0;
+[PROCESS_TABLE+childPid*16+9]=0;
+[PROCESS_TABLE+childPid*16+12]=0;
+[PROCESS_TABLE+childPid*16+2]=pid;
+[PROCESS_TABLE+childPid*16+4]=CREATED;
+R5=496;
+while(R5<512) do
+	[childUserAreaPg*512+R5]=[[PROCESS_TABLE+(pid*16)+11]*512+R5];
+	R5=R5+1;
+endwhile;
+R5=0;
+while(R5<10) do
+	[DISK_MAP_TABLE+childPid*10+R5]=[DISK_MAP_TABLE+pid*10+R5];
+	R5=R5+1;
+endwhile;
+R5=0;
+while(R5<16) do
+	[PAGE_TABLE_BASE+(childPid*20)+R5]=[PAGE_TABLE_BASE+(pid*20)+R5];
+	[PAGE_TABLE_BASE+(childPid*20)+R5+1]=[PAGE_TABLE_BASE+(pid*20)+R5+1];
+	[MEMORY_FREE_LIST+[PAGE_TABLE_BASE+(pid*20)+R5]]=[MEMORY_FREE_LIST+[PAGE_TABLE_BASE+(pid*20)+R5]]+1;
+	R5=R5+2;
+endwhile;
+//copying the contents of user stack pages for child from parent
+alias childStPgNo R6;
+alias parentStPgNo R7;
+childStPgNo=[PAGE_TABLE_BASE+childPid*20+16];
+parentStPgNo=[PTBR+16];
+R5=0;
+while(R5<512) do
+	[childStPgNo*512+R5]=[parentStPgNo*512+R5];
+	R5=R5+1;
+endwhile;
+childStPgNo=[PAGE_TABLE_BASE+childPid*20+18];
+parentStPgNo=[PTBR+18];
+R5=0;
+while(R5<512) do	
+	[childStPgNo*512+R5]=[parentStPgNo*512+R5];
+	R5=R5+1;
+endwhile;
+[childUserAreaPg*512]=BP;
+[[PTBR+2*(userSP-1)/512]*512+(userSP-1)%512]=childPid;
+alias childRetAdd R5;
+childRetAdd=[PAGE_TABLE_BASE+childPid*20+(2*(userSP-1)/512)]*512+(userSP-1)%512;
+[childRetAdd]=0;
+[PROCESS_TABLE+pid*16+9]=0;
+SP=userSP;
+ireturn;
+

@@ -1,5 +1,21 @@
 alias functionNum R1;
 alias pid R2;
+if(functionNum==1) then
+	R4=0;
+	while(R4<16) do
+		if([PROCESS_TABLE+R4*16+4]==TERMINATED) then
+			[PROCESS_TABLE+R4*16+1]=R4;
+			[PROCESS_TABLE+R4*16+4]=ALLOCATED;
+			[PROCESS_TABLE+R4*16+14]=PAGE_TABLE_BASE+20*R4;
+			[PROCESS_TABLE+R4*16+15]=10;
+			R0=R4;
+			return;		
+		endif;
+		R4=R4+1;
+	endwhile;
+	R0=-1;
+	return;
+endif;
 if(functionNum==2) then
 	alias userAreaPage R4;
 	userAreaPage=[PROCESS_TABLE+pid*16+11];
