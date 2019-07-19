@@ -25,8 +25,28 @@ if(functionNum==2) then
 	return;
 endif;
 if(functionNum==3) then
+	if([PROCESS_TABLE+pid*16+9]!=9) then
+		alias pidCntr R3;
+		pidCntr=0;
+		while(pidCntr<16) do
+			if([PROCESS_TABLE+pidCntr*16+4]==WAIT_PROCESS && [PROCESS_TABLE+pidCntr*16+5]==pid) then
+				[PROCESS_TABLE+pidCntr*16+4]=READY;
+				[PROCESS_TABLE+pidCntr*16+5]=-1;
+			endif;
+			if([PROCESS_TABLE+pidCntr*16+2]==pid) then
+				[PROCESS_TABLE+pidCntr*16+2]=-1;
+			endif;
+			pidCntr=pidCntr+1;
+		endwhile;
+	endif;
+	multipush(R1,R2);
 	R1=4;
 	call MOD_1;
+	multipop(R1,R2);
+	multipush(R1,R2);
+	R1=2;
+	call MOD_1;
+	multipop(R1,R2);
 	[PROCESS_TABLE+pid*16+4]=TERMINATED;
 	return;
 endif;
