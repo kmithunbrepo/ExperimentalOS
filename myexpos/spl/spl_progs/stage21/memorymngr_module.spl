@@ -1,0 +1,93 @@
+alias functionNum R1;
+alias pageNum R2;
+if(functionNum==1) then
+	[SYSTEM_STATUS_TABLE+3]=[SYSTEM_STATUS_TABLE+3]+1;
+	while([SYSTEM_STATUS_TABLE+2]==0) do
+		[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+4]=WAIT_MEM;
+		multipush(R1,R2,R3);
+		call MOD_5;
+		multipop(R1,R2,R3);
+	endwhile;
+	[SYSTEM_STATUS_TABLE+3]=[SYSTEM_STATUS_TABLE+3]-1;
+	[SYSTEM_STATUS_TABLE+2]=[SYSTEM_STATUS_TABLE+2]-1;
+	alias memPage R4;
+	memPage=76;
+	while(memPage<128) do
+		if([MEMORY_FREE_LIST+memPage]==0) then
+			[MEMORY_FREE_LIST+memPage]=1;
+			break;
+		endif;
+		memPage=memPage+1;
+	endwhile;
+	R0=memPage;
+	return;	
+endif;
+if(functionNum==2) then
+	[MEMORY_FREE_LIST+pageNum]=[MEMORY_FREE_LIST+pageNum]-1;
+	if([MEMORY_FREE_LIST+pageNum]==0) then
+		[SYSTEM_STATUS_TABLE+2]=[SYSTEM_STATUS_TABLE+2]+1;
+	endif;
+	alias pid R4;
+	pid=0;
+	while(pid<16) do
+		if([PROCESS_TABLE+pid*16+4]==WAIT_MEM) then
+			[PROCESS_TABLE+pid+16+4]=READY;
+		endif;
+		pid=pid+1;
+	endwhile;
+	return;
+endif;
+//release block function
+if(functionNum==4) then
+	alias blockNum R2;
+	alias pid R3;
+	[DISK_FREE_LIST+blockNum]=0;
+	return;
+endif;
+//get code page function
+if(functionNum==5) then
+	alias blockNum R2;
+	alias pid R3;
+	pid=0;
+	//looping throught all processes disk map table
+	while(pid<16) do
+		R4=0;
+		while(R4<10) do
+			if([DISK_MAP_TABLE+(pid*10)+R4]==blockNum) then
+				break;
+			endif;
+			R4=R4+1;
+		endwhile;
+		if(R4!=10) then
+			break;
+		endif;
+		pid=pid+1;
+	endwhile;
+	//checking if this block is already present in memory
+	if(pid!=16) then
+		alias pageNum R5;
+		pageNum=[PAGE_TABLE_BASE+(pid*20)+2*R4];
+		if(pageNum!=-1) then
+			[MEMORY_FREE_LIST+pageNum]=[MEMORY_FREE_LIST+pageNum]+1;
+			R0=pageNum;
+			return;
+		endif;
+	endif;
+	//calling get free page in the same memory manager module
+	multipush(R1,R2);
+	R1=1;
+	call MOD_2;
+	multipop(R1,R2);
+	alias pageNum R3;
+	pageNum=R0;
+	//calling disk load function in device manager module
+	multipush(R1,R2,R3);
+	R1=2;
+	R4=blockNum;
+	R2=[SYSTEM_STATUS_TABLE+1];
+	R3=pageNum;//No need repeated for easily understanding
+	call MOD_4;
+	multipop(R1,R2,R3);
+	R0=pageNum;
+	return;
+endif;

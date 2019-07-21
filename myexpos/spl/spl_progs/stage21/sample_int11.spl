@@ -1,0 +1,85 @@
+alias userSP R1;
+userSP=SP;
+// Extracting system call number from userStack
+alias sysCallNum R2;
+sysCallNum=[([PTBR+2*((userSP-5)/512)]*512)+((userSP-5)%512)];
+//Switching to Kernel Stack
+[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+13]=SP;
+SP=[PROCESS_TABLE+([SYSTEM_STATUS_TABLE+1]*16)+11]*512-1;
+
+//Implementation of getpid() system call
+if(sysCallNum==11) then	
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=11;
+	alias retAdd R3;
+	retAdd=[PTBR+2*(userSP-1)/512]*512+(userSP-1)%512;
+	[retAdd]=[SYSTEM_STATUS_TABLE+1];
+	SP=userSP;
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=0;
+	ireturn;
+endif;
+
+//Implementation of getppid() system call
+if(sysCallNum==12) then
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=12;	
+	alias retAdd R3;
+	retAdd=[PTBR+2*(userSP-1)/512]*512+(userSP-1)%512;
+	[retAdd]=[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+2];
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=0;	
+	SP=userSP;
+	ireturn;
+endif;
+//wait system call
+if(sysCallNum==13) then
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=13;
+	alias pid R3;
+	pid=[[PTBR+2*(userSP-4)/512]*512+(userSP-4)%512];
+	if(pid<0 || pid>=16) then
+		alias retAdd R4;
+		retAdd=[PTBR+2*(userSP-1)/512]*512+(userSP-1)%512;
+		[retAdd]=-1;
+		[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=0;
+		SP=userSP;
+		ireturn;
+	endif; 
+	if([PROCESS_TABLE+pid*16+4]==TERMINATED || [SYSTEM_STATUS_TABLE+1]==pid)  then
+		alias retAdd R4;
+		retAdd=[PTBR+2*(userSP-1)/512]*512+(userSP-1)%512;
+		[retAdd]=-1;
+		[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=0;
+		SP=userSP;
+		ireturn;
+	endif;
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+4]=WAIT_PROCESS;
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+5]=pid;
+	multipush(R1,R2);
+	call SCHEDULER;
+	multipop(R1,R2);
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=0;
+	alias retAdd R4;
+	retAdd=[PTBR+2*(userSP-1)/512]*512+(userSP-1)%512;
+	[retAdd]=0;
+	SP=userSP;
+	ireturn;
+	
+endif;
+//signal system call
+if(sysCallNum==14) then
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=14;
+	alias pidCntr R3;
+	pidCntr=0;
+	while(pidCntr<16) do
+		if([PROCESS_TABLE+pidCntr*16+4]==WAIT_PROCESS && [PROCESS_TABLE+pidCntr*16+5]==[SYSTEM_STATUS_TABLE+1]) then
+			[PROCESS_TABLE+pidCntr*16+4]=READY;
+			[PROCESS_TABLE+pidCntr*16+5]=-1;
+		endif;
+		pidCntr=pidCntr+1;
+	endwhile;
+	alias retAdd R4;
+	retAdd=[PTBR+2*(userSP-1)/512]*512+(userSP-1)%512;
+	[retAdd]=0;
+	[PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+9]=0;
+	SP=userSP;
+	ireturn;
+endif;
+SP=userSP;
+ireturn;
